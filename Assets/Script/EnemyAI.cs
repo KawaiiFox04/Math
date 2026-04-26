@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AI;
 
 public class EnemyAI : MonoBehaviour
 {
@@ -10,7 +11,7 @@ public class EnemyAI : MonoBehaviour
     public float attackRange = 2f;
     public float attackFOV = 60f;
     public float attackCooldown = 1f;
-    public int attackDamage = 10;
+    public int attackDamage = 1;
 
     [Header("Movement")]
     public float patrolSpeed = 2f;
@@ -28,23 +29,35 @@ public class EnemyAI : MonoBehaviour
     private float waitTimer = 0f;
     private bool isWaiting = false;
     private float attackTimer = 0f;
-    private Rigidbody rb;
+
+    private NavMeshAgent agent;
+    private PlayerHealth playerHealth;
 
     void Start()
     {
-        rb = GetComponent<Rigidbody>();
-        rb.constraints = RigidbodyConstraints.FreezeRotationX
-                       | RigidbodyConstraints.FreezeRotationZ;
+        agent = GetComponent<NavMeshAgent>();
 
         GameObject playerObj = GameObject.FindWithTag("Player");
         if (playerObj != null)
-            player = playerObj.transform;
+        {
+            player       = playerObj.transform;
+            playerHealth = playerObj.GetComponent<PlayerHealth>();
+
+            if (playerHealth == null)
+                Debug.LogWarning("[EnemyAI] PlayerHealth component not found on Player!");
+        }
 
         SetNewPatrolTarget();
     }
 
     void Update()
     {
+        if (playerHealth != null && playerHealth.IsDead)
+        {
+            agent.isStopped = true;
+            return;
+        }
+
         attackTimer -= Time.deltaTime;
 
         if (CanAttackPlayer())
@@ -106,25 +119,36 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        MoveToward(patrolTarget, patrolSpeed);
-        FaceDirection(patrolTarget - transform.position);
+        agent.speed     = patrolSpeed;
+        agent.isStopped = false;
+        agent.SetDestination(patrolTarget);
 
-        float dist = Vector3.Distance(
-            new Vector3(transform.position.x, 0, transform.position.z),
-            new Vector3(patrolTarget.x, 0, patrolTarget.z));
-
-        if (dist < 0.5f)
+        // รอให้ agent คำนวณ path เสร็จก่อนค่อยเช็ค
+        if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
         {
-            rb.linearVelocity = new Vector3(0, rb.linearVelocity.y, 0);
-            isWaiting = true;
-            waitTimer = patrolWaitTime;
+            agent.isStopped = true;
+            isWaiting       = true;
+            waitTimer       = patrolWaitTime;
         }
     }
 
     void SetNewPatrolTarget()
     {
-        Vector2 rand = Random.insideUnitCircle * patrolRadius;
-        patrolTarget = transform.position + new Vector3(rand.x, 0, rand.y);
+        // ลองสุ่มจุดใหม่จนกว่าจะได้จุดที่อยู่บน NavMesh จริงๆ
+        for (int i = 0; i < 10; i++)
+        {
+            Vector2 rand      = Random.insideUnitCircle * patrolRadius;
+            Vector3 candidate = transform.position + new Vector3(rand.x, 0, rand.y);
+
+            if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, 2f, NavMesh.AllAreas))
+            {
+                patrolTarget = hit.position;
+                return;
+            }
+        }
+
+        // ถ้าสุ่ม 10 ครั้งไม่ได้เลย ให้อยู่กับที่ก่อน
+        patrolTarget = transform.position;
     }
 
     // ============================================================
@@ -132,8 +156,9 @@ public class EnemyAI : MonoBehaviour
     // ============================================================
     void HandleChase()
     {
-        MoveToward(player.position, chaseSpeed);
-        FaceDirection(player.position - transform.position);
+        agent.speed     = chaseSpeed;
+        agent.isStopped = false;
+        agent.SetDestination(player.position);
     }
 
     // ============================================================
@@ -141,8 +166,7 @@ public class EnemyAI : MonoBehaviour
     // ============================================================
     void HandleAttack()
     {
-        // หยุดเคลื่อนที่แล้วหันหาผู้เล่น
-        rb.linearVelocity = new Vector3(0, rb.linearVelocity.y, 0);
+        agent.isStopped = true;
         FaceDirection(player.position - transform.position);
 
         if (attackTimer <= 0f)
@@ -154,11 +178,10 @@ public class EnemyAI : MonoBehaviour
 
     void PerformAttack()
     {
-        // ดึง PlayerHealth แล้วหักเลือด — เพิ่ม script PlayerHealth ภายหลังได้
-        // PlayerHealth hp = player.GetComponent<PlayerHealth>();
-        // if (hp != null) hp.TakeDamage(attackDamage);
+        if (playerHealth != null)
+            playerHealth.TakeDamage(attackDamage);
 
-        Debug.Log($"Enemy attacked Player for {attackDamage} damage!");
+        Debug.Log($"[EnemyAI] Attacked Player for {attackDamage} damage!");
     }
 
     // ============================================================
@@ -169,22 +192,12 @@ public class EnemyAI : MonoBehaviour
         return new Vector3(transform.forward.x, 0, transform.forward.z).normalized;
     }
 
-    // คืนค่า normalized direction บน XZ และ distance จริง
     Vector3 GetFlatDirectionToPlayer(out float distance)
     {
         Vector3 toPlayer = player.position - transform.position;
         Vector3 flat     = new Vector3(toPlayer.x, 0, toPlayer.z);
         distance         = flat.magnitude;
         return distance > 0.001f ? flat / distance : Vector3.zero;
-    }
-
-    void MoveToward(Vector3 target, float speed)
-    {
-        Vector3 dir = (target - transform.position);
-        dir.y = 0;
-        dir   = dir.normalized;
-
-        rb.linearVelocity = new Vector3(dir.x * speed, rb.linearVelocity.y, dir.z * speed);
     }
 
     void FaceDirection(Vector3 direction)
@@ -202,10 +215,7 @@ public class EnemyAI : MonoBehaviour
         Vector3 forward = new Vector3(transform.forward.x, 0, transform.forward.z).normalized;
         Vector3 origin  = transform.position + Vector3.up * 0.1f;
 
-        // Detection cone (สีเหลือง)
         DrawCone(origin, forward, detectionRange, fieldOfView, Color.blue);
-
-        // Attack cone (สีแดง)
         DrawCone(origin, forward, attackRange, attackFOV, Color.red);
     }
 
