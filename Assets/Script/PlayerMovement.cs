@@ -15,8 +15,7 @@ public class PlayerMovement : MonoBehaviour
     private Rigidbody rb;
     private Vector3 moveDirection;
     private Vector3 lastFacingDir = Vector3.forward;
-
-    // Reference ไปยัง PlayerHealth เพื่อตรวจสอบก่อนเคลื่อนที่
+    
     private PlayerHealth playerHealth;
 
     void Start()
@@ -30,7 +29,6 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        // ถ้าตายแล้วให้หยุดรับ input
         if (playerHealth != null && playerHealth.IsDead) return;
 
         float horizontal = Input.GetAxisRaw("Horizontal");
@@ -44,7 +42,6 @@ public class PlayerMovement : MonoBehaviour
 
     void FixedUpdate()
     {
-        // ถ้าตายแล้วให้หยุดนิ่ง
         if (playerHealth != null && playerHealth.IsDead)
         {
             rb.linearVelocity = new Vector3(0, rb.linearVelocity.y, 0);
@@ -57,9 +54,7 @@ public class PlayerMovement : MonoBehaviour
             moveDirection.z * moveSpeed
         );
     }
-
-    // ========== GIZMOS ==========
-
+    
     void OnDrawGizmos()
     {
         DrawVisionGizmo();

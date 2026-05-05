@@ -74,10 +74,7 @@ public class EnemyAI : MonoBehaviour
             case State.Attack: HandleAttack(); break;
         }
     }
-
-    // ============================================================
-    //  Detection — Dot Product (cone กว้าง)
-    // ============================================================
+    
     bool CanSeePlayer()
     {
         Vector3 toPlayerFlat = GetFlatDirectionToPlayer(out float distance);
@@ -88,10 +85,7 @@ public class EnemyAI : MonoBehaviour
 
         return dot >= halfFovCos;
     }
-
-    // ============================================================
-    //  Attack Detection — Dot Product (cone แคบ + ระยะใกล้)
-    // ============================================================
+    
     bool CanAttackPlayer()
     {
         Vector3 toPlayerFlat = GetFlatDirectionToPlayer(out float distance);
@@ -102,10 +96,7 @@ public class EnemyAI : MonoBehaviour
 
         return dot >= halfAtkFovCos;
     }
-
-    // ============================================================
-    //  Patrol
-    // ============================================================
+    
     void HandlePatrol()
     {
         if (isWaiting)
@@ -122,8 +113,7 @@ public class EnemyAI : MonoBehaviour
         agent.speed     = patrolSpeed;
         agent.isStopped = false;
         agent.SetDestination(patrolTarget);
-
-        // รอให้ agent คำนวณ path เสร็จก่อนค่อยเช็ค
+        
         if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
         {
             agent.isStopped = true;
@@ -134,7 +124,6 @@ public class EnemyAI : MonoBehaviour
 
     void SetNewPatrolTarget()
     {
-        // ลองสุ่มจุดใหม่จนกว่าจะได้จุดที่อยู่บน NavMesh จริงๆ
         for (int i = 0; i < 10; i++)
         {
             Vector2 rand      = Random.insideUnitCircle * patrolRadius;
@@ -146,24 +135,17 @@ public class EnemyAI : MonoBehaviour
                 return;
             }
         }
-
-        // ถ้าสุ่ม 10 ครั้งไม่ได้เลย ให้อยู่กับที่ก่อน
+        
         patrolTarget = transform.position;
     }
-
-    // ============================================================
-    //  Chase
-    // ============================================================
+    
     void HandleChase()
     {
         agent.speed     = chaseSpeed;
         agent.isStopped = false;
         agent.SetDestination(player.position);
     }
-
-    // ============================================================
-    //  Attack
-    // ============================================================
+    
     void HandleAttack()
     {
         agent.isStopped = true;
@@ -183,10 +165,7 @@ public class EnemyAI : MonoBehaviour
 
         Debug.Log($"[EnemyAI] Attacked Player for {attackDamage} damage!");
     }
-
-    // ============================================================
-    //  Helpers
-    // ============================================================
+    
     Vector3 GetEnemyForward()
     {
         return new Vector3(transform.forward.x, 0, transform.forward.z).normalized;
@@ -206,10 +185,7 @@ public class EnemyAI : MonoBehaviour
         if (direction.sqrMagnitude < 0.01f) return;
         transform.rotation = Quaternion.LookRotation(direction);
     }
-
-    // ============================================================
-    //  Gizmos
-    // ============================================================
+    
     void OnDrawGizmos()
     {
         Vector3 forward = new Vector3(transform.forward.x, 0, transform.forward.z).normalized;

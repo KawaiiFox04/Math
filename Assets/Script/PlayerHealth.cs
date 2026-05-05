@@ -7,8 +7,8 @@ public class PlayerHealth : MonoBehaviour
     public int maxHealth = 3;
 
     [Header("Events")]
-    public UnityEvent onDeath;                   // ลากใส่ใน Inspector ได้เลย
-    public UnityEvent<int, int> onHealthChanged; // (currentHP, maxHP)
+    public UnityEvent onDeath;                   
+    public UnityEvent<int, int> onHealthChanged; 
 
     private int currentHealth;
     private bool isDead = false;
@@ -21,10 +21,7 @@ public class PlayerHealth : MonoBehaviour
         currentHealth = maxHealth;
         onHealthChanged?.Invoke(currentHealth, maxHealth);
     }
-
-    // ============================================================
-    //  Public API — เรียกจาก EnemyAI หรือ script อื่นๆ
-    // ============================================================
+    
     public void TakeDamage(int amount)
     {
         if (isDead) return;
@@ -47,26 +44,15 @@ public class PlayerHealth : MonoBehaviour
 
         onHealthChanged?.Invoke(currentHealth, maxHealth);
     }
-
-    // ============================================================
-    //  Death
-    // ============================================================
+    
     void Die()
     {
         isDead = true;
         Debug.Log("[PlayerHealth] Player has died!");
 
         onDeath?.Invoke();
-
-        // ตัวอย่างสิ่งที่ทำตอนตาย — เปิด / ปิดตามต้องการ
-        // Destroy(gameObject);
-        // GetComponent<PlayerMovement>().enabled = false;
-        // SceneManager.LoadScene("GameOver");
     }
-
-    // ============================================================
-    //  Debug — กด G ตอน Play เพื่อทดสอบ
-    // ============================================================
+    
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.G))

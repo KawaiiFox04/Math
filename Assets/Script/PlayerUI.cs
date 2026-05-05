@@ -4,35 +4,27 @@ using TMPro;
 public class PlayerUI : MonoBehaviour
 {
     [Header("HP Text")]
-    public TMP_Text hpText;          // ลาก TextMeshPro object ใส่ตรงนี้ใน Inspector
+    public TMP_Text hpText;
 
     [Header("Game Over")]
-    public TMP_Text gameOverText;    // ลาก TextMeshPro object ใส่ตรงนี้ใน Inspector
+    public TMP_Text gameOverText;
 
     void Start()
     {
-        // ซ่อน Game Over ตอนเริ่มเกม
         if (gameOverText != null)
             gameOverText.gameObject.SetActive(false);
     }
-
-    // ============================================================
-    //  ลาก function นี้ใส่ onHealthChanged ใน Inspector
-    //  (รับ 2 ค่า: currentHP, maxHP)
-    // ============================================================
+    
     public void OnHealthChanged(int current, int max)
     {
         if (hpText != null)
             hpText.text = $"HP: {current}";
     }
-
-    // ============================================================
-    //  ลาก function นี้ใส่ onDeath ใน Inspector
-    // ============================================================
+    
     public void OnPlayerDied()
     {
         if (hpText != null)
-            hpText.gameObject.SetActive(false); // ซ่อน HP ตอนตาย
+            hpText.gameObject.SetActive(false); 
 
         if (gameOverText != null)
         {
